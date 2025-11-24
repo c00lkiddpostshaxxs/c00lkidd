@@ -1,0 +1,33 @@
+-- nice try skidder
+
+if game.PlaceID == 18687417158 then
+-- Forsaken
+loadstring(game:HttpGet("https://pastebin.com/raw/pvwLAcbq"))()
+elseif game.PlaceID == 6447798030 then
+-- Funky Friday
+loadstring(game:HttpGet("https://pastebin.com/raw/SwgAjArt"))()
+elseif game.PlaceID == 113506071094099 then
+-- SHARP
+loadstring(game:HttpGet("https://https://pastebin.com/raw/z8racFhb"))()
+elseif game.PlaceID == 79546208627805 then
+-- 99 Nights In The Forest
+loadstring(game:HttpGet("https://https://pastebin.com/raw/jgTqD6sQ"))()
+elseif game.PlaceID == 1215581239 then
+-- Doomspire Brickbattle
+loadstring(game:HttpGet("https://pastebin.com/raw/nrS7jxvb"))()
+elseif game.PlaceID == 77483797026305 then
+-- Sword Fight On The Heights
+loadstring(game:HttpGet("https://pastebin.com/raw/1q8DY6mx"))()
+elseif game.PlaceID == 16732694052 then
+-- Fisch
+loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Script-Games/main/Pet%20GO.lua"))()
+elseif game.PlaceID == 6516141723 then
+-- Doors
+loadstring(game:HttpGet("https://pastebin.com/raw/8gJ1ssgC"))()
+elseif game.PlaceID == 12411473842 then
+-- Pressure
+loadstring(game:HttpGet("https://pastebin.com/raw/54hNiWHA"))()
+elseif game.PlaceID == 138837502355157 then
+-- Grace
+loadstring(game:HttpGet("https://pastebin.com/raw/Yg8Kgffr"))()
+end
