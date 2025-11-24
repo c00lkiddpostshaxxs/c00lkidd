@@ -1,4 +1,4 @@
---[[ real wowwwwww
+-- real wowwwwww
 
 --if game.PlaceID == 18687417158 then
 -- Forsaken
@@ -14,8 +14,8 @@
 --loadstring(game:HttpGet("https://https://pastebin.com/raw/jgTqD6sQ"))()
 --elseif game.PlaceID == 1215581239 then
 -- Doomspire Brickbattle
-    local http = 
 --loadstring(game:HttpGet("https://pastebin.com/raw/nrS7jxvb"))()
+local http = 
 --elseif game.PlaceID == 77483797026305 then
 -- Sword Fight On The Heights
 --loadstring(game:HttpGet("https://pastebin.com/raw/1q8DY6mx"))()
@@ -30,5 +30,5 @@
 --loadstring(game:HttpGet("https://pastebin.com/raw/54hNiWHA"))()
 --elseif game.PlaceID == 138837502355157 then
 -- Grace
-loadstring(game:HttpGet("https://pastebin.com/raw/Yg8Kgffr"))()
-end ]]
+--loadstring(game:HttpGet("https://pastebin.com/raw/Yg8Kgffr"))()
+--end
