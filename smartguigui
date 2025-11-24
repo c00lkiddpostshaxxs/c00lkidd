@@ -6,10 +6,10 @@ elseif game.PlaceID == 6447798030 then
 loadstring(game:HttpGet("https://pastebin.com/raw/SwgAjArt"))()
 elseif game.PlaceID == 113506071094099 then
 -- SHARP
-loadstring(game:HttpGet("https://https://pastebin.com/raw/z8racFhb"))()
+loadstring(game:HttpGet("https://pastebin.com/raw/z8racFhb"))()
 elseif game.PlaceID == 79546208627805 then
 -- 99 Nights In The Forest
-loadstring(game:HttpGet("https://https://pastebin.com/raw/jgTqD6sQ"))()
+loadstring(game:HttpGet("https://pastebin.com/raw/jgTqD6sQ"))()
 elseif game.PlaceID == 1215581239 then
 -- Doomspire Brickbattle
 loadstring(game:HttpGet("https://pastebin.com/raw/nrS7jxvb"))()
