@@ -66,3 +66,108 @@ local function notify(msg)
     n:Destroy()
 end
 
+local scripts = {
+   {
+      TEXT_Thumbnail = "Forsaken",
+      GAME_ID = 18687417158,
+      SCRIPT = "https://raw.githubusercontent.com/c00lkiddpostshaxxs/c00lkidd/refs/heads/main/Rayfield/Forsaken"
+   }
+}
+
+local listScroll = Instance.new("ScrollingFrame", main)
+listScroll.Size = UDim2.new(1, -20, 1, -100)
+listScroll.Position = UDim2.new(0, 10, 0, 50)
+listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+listScroll.ScrollBarThickness = 4
+listScroll.BackgroundColor3 = Color3.fromRGB(20,20,20)
+listScroll.BorderColor3 = Color3.fromRGB(255,255,255)
+listScroll.BorderSizePixel = 1
+
+local UIList = Instance.new("UIListLayout", listScroll)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 4)
+
+local selectedScript = nil
+
+for _, data in pairs(scripts) do
+    local entry = Instance.new("TextButton", listScroll)
+    entry.Size = UDim2.new(1, 0, 0, 60)
+    entry.Text = ""
+    entry.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    entry.BorderSizePixel = 0
+    Instance.new("UICorner", entry).CornerRadius = UDim.new(0, 4)
+
+    local lbl = Instance.new("TextLabel", entry)
+    lbl.Text = data.TEXT_Thumbnail
+    lbl.Size = UDim2.new(1, -70, 1, 0)
+    lbl.Position = UDim2.new(0, 70, 0, 0)
+    lbl.Font = Enum.Font.Code
+    lbl.TextSize = 15
+    lbl.TextColor3 = Color3.new(1,1,1)
+    lbl.BackgroundTransparency = 1
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local thumb = Instance.new("ImageLabel", entry)
+    thumb.Size = UDim2.new(0, 60, 0, 60)
+    thumb.Position = UDim2.new(0, 5, 0, 0)
+    thumb.BackgroundTransparency = 1
+    thumb.Image = "https://www.roblox.com/asset-thumbnail/image?assetId="..data.GAME_ID.."&width=420&height=420&format=png"
+
+    entry.MouseButton1Click:Connect(function()
+        for _, btn in ipairs(listScroll:GetChildren()) do
+            if btn:IsA("TextButton") then
+                btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            end
+        end
+        entry.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        selectedScript = data
+        notify("Selected: "..data.TEXT_Thumbnail)
+    end)
+end
+
+UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    listScroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 10)
+end)
+
+local exec = Instance.new("TextButton", main)
+exec.Text = "Execute"
+exec.Size = UDim2.new(0, 100, 0, 36)
+exec.Position = UDim2.new(1, -220, 1, -44)
+exec.AnchorPoint = Vector2.new(0, 0)
+exec.Font = Enum.Font.Code
+exec.TextSize = 16
+exec.TextColor3 = Color3.new(1,1,1)
+exec.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Instance.new("UICorner", exec).CornerRadius = UDim.new(0, 6)
+
+local debounce = false
+exec.MouseButton1Click:Connect(function()
+    if debounce then return end
+    debounce = true
+    if selectedScript then
+        notify("Executing: "..selectedScript.TEXT_Thumbnail)
+        wait(1)
+        pcall(function()
+            loadstring(game:HttpGet(selectedScript.SCRIPT))()
+        end)
+        gui:Destroy()
+    else
+        notify("No script selected")
+    end
+    wait(1)
+    debounce = false
+end)
+
+local destroy = exec:Clone()
+destroy.Text = "Destroy"
+destroy.Position = UDim2.new(1, -110, 1, -44)
+destroy.Parent = main
+
+destroy.MouseButton1Click:Connect(function()
+    gui:Destroy()
+end)
+
+main.Position = UDim2.new(0.5, 0, 1.2, 0)
+TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+    Position = UDim2.new(0.5, 0, 0.5, 0)
+}):Play()
