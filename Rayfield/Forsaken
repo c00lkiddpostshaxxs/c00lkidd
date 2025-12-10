@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "c00lgui",
    Icon = 88037947678681, 
-   LoadingTitle = "c00lkidd Hub",
-   LoadingSubtitle = "by @chickennuggets0389 on Roblox",
+   LoadingTitle = "team c00lkidd, join today!",
+   LoadingSubtitle = "enjoy :3",
    ShowText = "c00lkidd Hub", 
    Theme = "Default", 
 
