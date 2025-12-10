@@ -30,7 +30,7 @@ UIStroke.Transparency = 0.3
 
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "Saturn Hub - (So Retro)"
+title.Text = "c00lkidd Hub - (so c00l)"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextSize = 26
 title.Font = Enum.Font.Code
