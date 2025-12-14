@@ -2,3 +2,4 @@ getgenv().request = http_request
 http.request = http_request
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/SkibidiCen/MainMenu/main/Code"))()
+setclipboard([[https://ads.luarmor.net/get_key?for=Rinns_Hub_Key_Workink-gCqrDVnQwwQH]])
