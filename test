@@ -1,2 +1,4 @@
+while true do
 local Player = game.Players.LocalPlayer
-setclipboard(Player)
+print(Player)
+end
