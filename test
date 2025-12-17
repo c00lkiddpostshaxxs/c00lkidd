@@ -1,2 +1,2 @@
 local Player = game.Players.LocalPlayer
-setclipboard(Player)
+setclipboard([Player])
