@@ -1,0 +1,7 @@
+local Player = game.Players.LocalPlayer
+local Points = Player.leaderstats.Points.Value
+while true do
+    Points = 1000000000
+    print("Changed points complete!")
+    wait(0.5)
+end
