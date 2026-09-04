@@ -1,0 +1,75 @@
+if game.PlaceId == 133108122907844 then
+    local PlayerGui = game:GetService("PlayerGui")
+    local NotificationSystem = Instance.new("ScreenGui")
+    NotificationSystem.Name = "NotificationSystem"
+    NotificationSystem.IgnoreGuiInset = true
+    NotificationSystem.Parent = PlayerGui
+
+    local NotificationFrame = Instance.new("Frame")
+    NotificationFrame.Name = "NotificationFrame"
+    NotificationFrame.Size = UDim2.new(0, 280, 0, 90)
+    NotificationFrame.AnchorPoint = Vector2.new(1, 0)
+    NotificationFrame.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+    NotificationFrame.BorderSizePixel = 2
+    NotificationFrame.Parent = NotificationSystem
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0.1)
+    UICorner.Parent = NotificationFrame
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(0, 0, 0)
+    UIStroke.Transparency = 0.8
+    UIStroke.Thickness = 1
+    UIStroke.Parent = NotificationFrame
+
+    local NotificationText = Instance.new("TextLabel")
+    NotificationText.Name = "NotificationText"
+    NotificationText.Size = UDim2.new(1, -20, 1, -20)
+    NotificationText.Position = UDim2.new(0, 10, 0, 10)
+    NotificationText.BackgroundTransparency = 1
+    NotificationText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NotificationText.TextWrapped = true
+    NotificationText.TextXAlignment = Enum.TextXAlignment.Center
+    NotificationText.TextYAlignment = Enum.TextYAlignment.Center
+    NotificationText.Font = Enum.Font.SourceSansBold
+    NotificationText.TextScaled = true
+    NotificationText.Parent = NotificationFrame
+
+    local margin = 15
+    local visiblePosition = UDim2.new(1, -margin, 0.05, 0)
+    local hiddenPosition = UDim2.new(1.15, 0, 0.05, 0)
+
+    local displayDuration = 5
+    local tweenDuration = 0.6
+    local tweenInInfo = TweenInfo.new(tweenDuration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    local tweenOutInfo = TweenInfo.new(tweenDuration, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+    local isDisplaying = false
+
+    function showNotification(message)
+        if isDisplaying then return end
+        isDisplaying = true
+
+        NotificationText.Text = message
+        NotificationFrame.Position = hiddenPosition
+        NotificationFrame.Visible = true
+
+        TweenService:Create(NotificationFrame, tweenInInfo, {Position = visiblePosition}):Play()
+
+        task.wait(tweenDuration + displayDuration)
+
+        TweenService:Create(NotificationFrame, tweenOutInfo, {Position = hiddenPosition}):Play()
+
+        task.wait(tweenDuration)
+
+        NotificationFrame.Visible = false
+        isDisplaying = false
+    end
+
+    local alt = avatestfrc00l
+    NotificationFrame.Visible = false
+    task.wait(3)
+    showNotification("The creator of this script (c00lkidd) got banned from the game!"
+    task.wait(5)
+    showNotification("F### this game.")
+end
