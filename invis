@@ -1,0 +1,588 @@
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
+if not success or not Rayfield then
+    warn("Failed to load Rayfield. Aborting UI creation.")
+    return
+end
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local player = game.Players.LocalPlayer
+local buttonClickSoundId = "rbxassetid://232127604"
+local buttonClickSound = Instance.new("Sound")
+buttonClickSound.SoundId = buttonClickSoundId
+buttonClickSound.Volume = 0.5
+buttonClickSound.Parent = workspace
+local DEBUG_MODE = true
+local keybinds_enabled_state = true
+local invis_enabled = true
+local fake_character_enabled = false
+local debounce = false
+local walkspeed_boost_enabled = false
+local originalCharacterColor = nil
+local fakeCharacterModel = nil
+local seatTeleportPosition = Vector3.new(-25.95, 400, 3537.55)
+local currentSeatPosition = nil
+local seatReturnHeartbeatConnection = nil
+local ghost_speed_enabled = false
+local voidLevelYThreshold = -50
+local sound_enabled = true
+local notifications_enabled = true
+local keybinds = {
+    toggle_invis = Enum.KeyCode.Z,
+    toggle_ui_hide = Enum.KeyCode.K,
+    toggle_noclip = Enum.KeyCode.N,
+    toggle_walkspeed_boost = Enum.KeyCode.B,
+    load_ui = Enum.KeyCode.L,
+}
+local invis_on = false
+local current_method = 1
+local method1_speed = 1
+local generic_speed_value = 16
+local noclip_enabled = false
+local InvisScriptLoaded = false
+local invis_transparency = 0.75
+
+-- Persistence config
+local SETTINGS_FOLDER = "FeInvisible"
+local SETTINGS_FILE = SETTINGS_FOLDER .. "/settings.txt"
+
+local function saveSettings()
+    local settings = {
+        generic_speed_value = generic_speed_value,
+        invis_transparency = invis_transparency,
+        sound_enabled = sound_enabled,
+        notifications_enabled = notifications_enabled,
+        keybinds = {
+            toggle_invis = (keybinds.toggle_invis and keybinds.toggle_invis.Name) or "Z",
+            toggle_ui_hide = (keybinds.toggle_ui_hide and keybinds.toggle_ui_hide.Name) or "K",
+            toggle_noclip = (keybinds.toggle_noclip and keybinds.toggle_noclip.Name) or "N",
+            toggle_walkspeed_boost = (keybinds.toggle_walkspeed_boost and keybinds.toggle_walkspeed_boost.Name) or "B",
+            load_ui = (keybinds.load_ui and keybinds.load_ui.Name) or "L",
+        }
+    }
+    pcall(function()
+        if type(makefolder) == "function" then
+            pcall(makefolder, SETTINGS_FOLDER)
+        end
+        local encoded = HttpService:JSONEncode(settings)
+        if type(writefile) == "function" then
+            writefile(SETTINGS_FILE, encoded)
+        elseif type(save) == "function" then
+            pcall(save, SETTINGS_FILE, encoded)
+        end
+    end)
+end
+
+local function loadSettings()
+    local content = nil
+    local ok
+    if type(isfile) == "function" then
+        ok, content = pcall(function()
+            if isfile(SETTINGS_FILE) then
+                return readfile(SETTINGS_FILE)
+            end
+            return nil
+        end)
+    elseif type(readfile) == "function" then
+        ok, content = pcall(function() return readfile(SETTINGS_FILE) end)
+    end
+    if ok and content then
+        local decodedOk, data = pcall(function() return HttpService:JSONDecode(content) end)
+        if decodedOk and type(data) == "table" then
+            if type(data.generic_speed_value) == "number" then generic_speed_value = data.generic_speed_value end
+            if type(data.invis_transparency) == "number" then invis_transparency = data.invis_transparency end
+            if type(data.sound_enabled) == "boolean" then sound_enabled = data.sound_enabled end
+            if type(data.notifications_enabled) == "boolean" then notifications_enabled = data.notifications_enabled end
+            if type(data.keybinds) == "table" then
+                for k, v in pairs(data.keybinds) do
+                    if type(v) == "string" and Enum.KeyCode[v] then
+                        keybinds[k] = Enum.KeyCode[v]
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- load persisted settings early so UI reflects them
+pcall(loadSettings)
+
+local function Notify(title, content, duration, image, actions)
+    if not notifications_enabled then return end
+    pcall(function()
+        Rayfield:Notify({
+            Title = title or "Notice",
+            Content = content or "",
+            Duration = duration or 2,
+            Image = image or nil,
+            Actions = actions or nil,
+        })
+    end)
+end
+
+local function playButtonSound()
+    if sound_enabled then
+        pcall(function() buttonClickSound:Play() end)
+    end
+end
+
+local function setCharacterTransparency(transparency)
+    local character = player.Character
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.Transparency = transparency
+            end
+        end
+    end
+end
+
+local function setGhostSpeed(enabled)
+    ghost_speed_enabled = enabled
+    local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        if enabled and invis_on then
+            humanoid.WalkSpeed = 40
+            Notify("Ghost Speed", "Ghost speed enabled (40)", 1)
+        else
+            humanoid.WalkSpeed = walkspeed_boost_enabled and 32 or generic_speed_value
+            Notify("Ghost Speed", "Ghost speed disabled", 1)
+        end
+    end
+end
+
+local function startSeatReturnHeartbeat()
+    if seatReturnHeartbeatConnection then
+        seatReturnHeartbeatConnection:Disconnect()
+        seatReturnHeartbeatConnection = nil
+    end
+    seatReturnHeartbeatConnection = RunService.Heartbeat:Connect(function()
+    end)
+end
+
+local function stopSeatReturnHeartbeat()
+    if seatReturnHeartbeatConnection then
+        seatReturnHeartbeatConnection:Disconnect()
+        seatReturnHeartbeatConnection = nil
+    end
+end
+
+local function toggleNoclipInternal()
+    noclip_enabled = not noclip_enabled
+    if DEBUG_MODE then
+        print("Toggling Noclip - noclip_enabled is now: " .. tostring(noclip_enabled))
+    end
+    local character = player.Character
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                pcall(function() part.CanCollide = not noclip_enabled end)
+            end
+        end
+        Notify("Noclip Toggled", "Noclip is now " .. (noclip_enabled and "ENABLED" or "DISABLED"), 1)
+    else
+        warn("Character not found to toggle Noclip!")
+        Notify("Noclip Failed", "Noclip toggle failed - Character not found.", 1)
+    end
+end
+
+local function toggleWalkSpeedBoostInternal()
+    walkspeed_boost_enabled = not walkspeed_boost_enabled
+    if DEBUG_MODE then
+        print("Toggling Walk Speed Boost - walkspeed_boost_enabled is now: " .. tostring(walkspeed_boost_enabled))
+    end
+    local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = walkspeed_boost_enabled and 32 or generic_speed_value
+        setGhostSpeed(ghost_speed_enabled)
+        Notify("Walk Speed Boost", "Walk Speed Boost is now " .. (walkspeed_boost_enabled and "ENABLED" or "DISABLED"), 1)
+    else
+        warn("Humanoid not found to toggle WalkSpeedBoost!")
+        Notify("Walk Speed Boost Failed", "Humanoid not found.", 1)
+    end
+end
+
+local function setGenericSpeedFromText(speedText)
+    local speedValue = tonumber(speedText)
+    if speedValue then
+        generic_speed_value = speedValue
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = generic_speed_value
+            Notify("Walk Speed Set", "Walk Speed set to: " .. generic_speed_value, 1)
+            if DEBUG_MODE then print("Generic speed updated to", generic_speed_value) end
+        else
+            Notify("Walk Speed Failed", "Humanoid not found.", 1)
+        end
+        pcall(saveSettings)
+    else
+        Notify("Invalid Speed Input", "Please enter a valid number. Reverted to: " .. tostring(generic_speed_value), 2)
+    end
+end
+
+local function toggleInvisibility()
+    if not invis_enabled then return end
+    playButtonSound()
+    invis_on = not invis_on
+    if DEBUG_MODE then
+        print("Toggling Invisibility - invis_on is now: " .. tostring(invis_on) .. ", Method: " .. current_method)
+    end
+    if invis_on then
+        if current_method == 1 then
+            setCharacterTransparency(invis_transparency)
+            Notify("Invis", "Enabling invisibility (Seat method)...", 1)
+            local character = player.Character
+            if character then
+                if DEBUG_MODE then print("toggleInvisibility: Character found: ", character.Name) end
+                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                if humanoidRootPart then
+                    if DEBUG_MODE then print("toggleInvisibility: HumanoidRootPart found: ", humanoidRootPart.Name) end
+                    local savedpos = humanoidRootPart.CFrame
+                    if DEBUG_MODE then print("toggleInvisibility Method 1: Speed is now", method1_speed) end
+                    task.wait(math.max(0.01, 0.05 / math.max(0.1, method1_speed)))
+                    pcall(function() character:MoveTo(seatTeleportPosition) end)
+                    task.wait(math.max(0.01, 0.05 / math.max(0.1, method1_speed)))
+                    if not character:FindFirstChild("HumanoidRootPart") or character.HumanoidRootPart.Position.Y < voidLevelYThreshold then
+                        pcall(function() character:MoveTo(savedpos) end)
+                        Notify("Invis Failed (Void)", "Teleport to seat failed - void detected. Returned to start.", 3)
+                        invis_on = false
+                        setCharacterTransparency(0)
+                        return
+                    end
+                    local Seat = Instance.new('Seat')
+                    Seat.Parent = workspace
+                    Seat.Anchored = false
+                    Seat.CanCollide = false
+                    Seat.Name = 'invischair'
+                    Seat.Transparency = 1
+                    Seat.Position = seatTeleportPosition
+                    local Weld = Instance.new("Weld")
+                    Weld.Part0 = Seat
+                    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+                    if torso then
+                        if DEBUG_MODE then print("toggleInvisibility: Torso found: ", torso.Name) end
+                        Weld.Part1 = torso
+                        Weld.Parent = Seat
+                        task.wait()
+                        pcall(function() Seat.CFrame = savedpos end)
+                        currentSeatPosition = Seat.Position
+                        startSeatReturnHeartbeat()
+                        Notify("Invis Enabled (Seat)", "Method: Seat - semi-transparent & teleported to seat", 1)
+                    else
+                        Seat:Destroy()
+                        currentSeatPosition = nil
+                        stopSeatReturnHeartbeat()
+                        Notify("Invis Enabled (Seat - No Torso)", "Semi-transparent but torso missing for seat.", 1)
+                    end
+                else
+                    currentSeatPosition = nil
+                    stopSeatReturnHeartbeat()
+                    Notify("Invis Failed (No RootPart)", "Teleport failed - no HumanoidRootPart.", 1)
+                end
+            else
+                currentSeatPosition = nil
+                stopSeatReturnHeartbeat()
+                Notify("Invis Failed", "Character not found.", 1)
+            end
+        end
+    else
+        setCharacterTransparency(0)
+        Notify("Invis Disabled", "Character is now fully visible", 1)
+        task.spawn(function()
+            local inv = workspace:FindFirstChild('invischair')
+            if inv then
+                pcall(function() inv:Destroy() end)
+            end
+            local box = workspace:FindFirstChild('InvisBoxMethod2')
+            if box then
+                pcall(function() box:Destroy() end)
+            end
+        end)
+        stopSeatReturnHeartbeat()
+        currentSeatPosition = nil
+        setGhostSpeed(false)
+    end
+end
+
+local function unloadInvisUI()
+    playButtonSound()
+    if DEBUG_MODE then print("UnloadInvisUI: Unloading UI and resetting...") end
+    invis_on = false
+    noclip_enabled = false
+    fake_character_enabled = false
+    walkspeed_boost_enabled = false
+    DEBUG_MODE = false
+    keybinds_enabled_state = true
+    generic_speed_value = 16
+    InvisScriptLoaded = false
+    ghost_speed_enabled = false
+    setCharacterTransparency(0)
+    stopSeatReturnHeartbeat()
+    setGhostSpeed(false)
+    if fakeCharacterModel then
+        if fakeCharacterModel:IsDescendantOf(workspace) then
+            fakeCharacterModel:Destroy()
+        end
+        fakeCharacterModel = nil
+    end
+    if workspace:FindFirstChild('invischair') then
+        local invischair = workspace:FindFirstChild('invischair')
+        if invischair then
+            invischair:Destroy()
+        end
+    end
+    pcall(function() Rayfield:Destroy() end)
+    Notify("Invis UI Unloaded", "UI and all features have been unloaded and reset.", 2)
+end
+
+local Window = Rayfield:CreateWindow({
+    Name = "FE Invisible V2.3",
+    LoadingTitle = "FE Invisible Loader",
+    LoadingSubtitle = "by Mohamedguguu",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "FEInvisibleConfigs",
+        FileName = "FEInvisible"
+    },
+    Discord = {
+        Enabled = false,
+    },
+    KeySystem = false,
+})
+
+local MainTab = Window:CreateTab("Main")
+local SettingsTab = Window:CreateTab("Settings")
+
+MainTab:CreateLabel("Controls: Z = Invisibility | K = UI | N = Noclip | B = Boost | L = Load UI")
+MainTab:CreateLabel("More will come...")
+
+MainTab:CreateSection("Core Controls")
+
+MainTab:CreateButton({ Name = "Toggle Invisibility", Callback = toggleInvisibility })
+MainTab:CreateButton({ Name = "Unload UI", Callback = unloadInvisUI })
+
+MainTab:CreateToggle({
+    Name = "Speed Boost (32)",
+    CurrentValue = walkspeed_boost_enabled,
+    Flag = "SpeedBoostToggle",
+    Callback = function(val)
+        walkspeed_boost_enabled = val
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = walkspeed_boost_enabled and 32 or generic_speed_value
+        end
+        Notify("Speed Boost", "Speed Boost is now " .. (walkspeed_boost_enabled and "ENABLED" or "DISABLED"), 1)
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Ghost Speed (Invis Only)",
+    CurrentValue = ghost_speed_enabled,
+    Flag = "GhostSpeedToggle",
+    Callback = function(val)
+        setGhostSpeed(val)
+    end,
+})
+
+MainTab:CreateInput({
+    Name = "Set Generic Walk Speed",
+    PlaceholderText = tostring(generic_speed_value),
+    RemoveTextAfterFocusLost = false,
+    Callback = function(text)
+        setGenericSpeedFromText(text)
+    end,
+})
+
+MainTab:CreateSlider({
+    Name = "Quick Speed Slider",
+    Range = {8, 100},
+    Increment = 1,
+    CurrentValue = generic_speed_value,
+    Flag = "SpeedSlider",
+    Callback = function(value)
+        generic_speed_value = math.floor(value)
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = generic_speed_value
+        end
+        Notify("Walk Speed Changed", "Speed set to " .. tostring(generic_speed_value), 1)
+        pcall(saveSettings)
+    end,
+})
+
+MainTab:CreateParagraph({
+    Title = "How does it work?",
+    Content = [[
+- Method 1: Seat - teleports the character to a set position and welds a seat to the torso.
+- Press your keybinds (Z, K, N, B, L) to toggle features quickly.
+- Use Rayfield UI to toggle features and set walk speed.
+]],
+})
+
+SettingsTab:CreateSection("General")
+SettingsTab:CreateToggle({
+    Name = "Debug Mode",
+    CurrentValue = DEBUG_MODE,
+    Flag = "DebugToggle",
+    Callback = function(val)
+        DEBUG_MODE = val
+        Notify("Debug Mode", "Debug mode is now " .. (DEBUG_MODE and "ON" or "OFF"), 1)
+    end,
+})
+SettingsTab:CreateSlider({
+    Name = "Invis Transparency (%)",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = math.clamp(math.floor(invis_transparency * 100), 0, 100),
+    Flag = "InvisTransparency",
+    Callback = function(value)
+        invis_transparency = math.clamp(value / 100, 0, 1)
+        if invis_on then setCharacterTransparency(invis_transparency) end
+        Notify("Invis Transparency", "Transparency set to " .. tostring(math.floor(invis_transparency * 100)) .. "%", 1)
+        pcall(saveSettings)
+    end,
+})
+
+SettingsTab:CreateSection("Audio & Notifications")
+SettingsTab:CreateToggle({
+    Name = "Enable Button Sounds",
+    CurrentValue = sound_enabled,
+    Flag = "SoundToggle",
+    Callback = function(val)
+        sound_enabled = val
+        Notify("Sounds", "Button sounds are now " .. (sound_enabled and "ENABLED" or "DISABLED"), 1)
+        pcall(saveSettings)
+    end,
+})
+SettingsTab:CreateToggle({
+    Name = "Enable Notifications",
+    CurrentValue = notifications_enabled,
+    Flag = "NotificationsToggle",
+    Callback = function(val)
+        notifications_enabled = val
+        pcall(saveSettings)
+    end,
+})
+
+local function updateKeybind(bindName, keyValue)
+    if typeof(keyValue) == "EnumItem" and keyValue.EnumType == Enum.KeyCode then
+        keybinds[bindName] = keyValue
+        Notify("Keybind Updated", bindName .. " set to " .. keyValue.Name, 1)
+        pcall(saveSettings)
+        return
+    end
+    if type(keyValue) == "string" then
+        local upper = keyValue:upper()
+        local enumVal = Enum.KeyCode[upper]
+        if enumVal then
+            keybinds[bindName] = enumVal
+            Notify("Keybind Updated", bindName .. " set to " .. enumVal.Name, 1)
+            pcall(saveSettings)
+            return
+        end
+    end
+end
+
+SettingsTab:CreateSection("Keybinds (click to set)")
+SettingsTab:CreateKeybind({ Name = "Toggle Invisibility Key", CurrentKeybind = keybinds.toggle_invis.Name, HoldToInteract = false, Flag = "Keybind_Invis", Callback = function(k) updateKeybind("toggle_invis", k) end })
+SettingsTab:CreateKeybind({ Name = "Toggle UI Key", CurrentKeybind = keybinds.toggle_ui_hide.Name, HoldToInteract = false, Flag = "Keybind_UI", Callback = function(k) updateKeybind("toggle_ui_hide", k) end })
+SettingsTab:CreateKeybind({ Name = "Toggle Noclip Key", CurrentKeybind = keybinds.toggle_noclip.Name, HoldToInteract = false, Flag = "Keybind_Noclip", Callback = function(k) updateKeybind("toggle_noclip", k) end })
+SettingsTab:CreateKeybind({ Name = "Toggle Walkspeed Boost Key", CurrentKeybind = keybinds.toggle_walkspeed_boost.Name, HoldToInteract = false, Flag = "Keybind_Boost", Callback = function(k) updateKeybind("toggle_walkspeed_boost", k) end })
+SettingsTab:CreateKeybind({ Name = "Load UI Key", CurrentKeybind = keybinds.load_ui.Name, HoldToInteract = false, Flag = "Keybind_Load", Callback = function(k) updateKeybind("load_ui", k) end })
+
+local connections = {}
+
+local function restoreCollisions()
+    local character = player.Character
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                pcall(function() part.CanCollide = true end)
+            end
+        end
+    end
+end
+
+local function restoreWalkSpeed()
+    local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        pcall(function() humanoid.WalkSpeed = 16 end)
+    end
+end
+
+local function fastCleanupPlayerState()
+    pcall(function() setCharacterTransparency(0) end)
+    pcall(function() restoreWalkSpeed() end)
+    pcall(function() restoreCollisions() end)
+end
+
+local function disconnectAllConnections()
+    for _, conn in ipairs(connections) do
+        if conn and typeof(conn.Disconnect) == "function" then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    connections = {}
+end
+
+local function destroyIfExists(instanceName)
+    local inst = workspace:FindFirstChild(instanceName)
+    if inst then
+        pcall(function() inst:Destroy() end)
+    end
+end
+
+local function fastUnload()
+    keybinds_enabled_state = false
+    InvisScriptLoaded = false
+    playButtonSound()
+    invis_on = false
+    noclip_enabled = false
+    fake_character_enabled = false
+    walkspeed_boost_enabled = false
+    ghost_speed_enabled = false
+    DEBUG_MODE = false
+    disconnectAllConnections()
+    stopSeatReturnHeartbeat()
+    task.spawn(function()
+        fastCleanupPlayerState()
+        if fakeCharacterModel and fakeCharacterModel:IsDescendantOf(workspace) then
+            pcall(function() fakeCharacterModel:Destroy() end)
+        end
+        fakeCharacterModel = nil
+        destroyIfExists('invischair')
+        destroyIfExists('InvisBoxMethod2')
+        pcall(function()
+            buttonClickSound:Stop()
+            buttonClickSound:Destroy()
+        end)
+        pcall(function() Rayfield:Destroy() end)
+        pcall(function() restoreWalkSpeed() end)
+        pcall(function() restoreCollisions() end)
+        pcall(function() Notify("Invis UI Unloaded", "UI and features have been unloaded and reset quickly.", 1) end)
+    end)
+end
+
+local inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if not keybinds_enabled_state then return end
+    if input.KeyCode == keybinds.toggle_invis then
+        toggleInvisibility()
+    elseif input.KeyCode == keybinds.toggle_ui_hide then
+        Notify("UI Toggle", "Programmatic hide/unhide isn't supported reliably across Rayfield forks. Use Unload UI to remove and re-run script to reload.", 2)
+    elseif input.KeyCode == keybinds.toggle_noclip then
+        toggleNoclipInternal()
+    elseif input.KeyCode == keybinds.toggle_walkspeed_boost then
+        toggleWalkSpeedBoostInternal()
+    elseif input.KeyCode == keybinds.load_ui then
+        Notify("Load UI", "UI is already loaded. Use 'Unload UI' to reset.", 1)
+    end
+end)
+table.insert(connections, inputConnection)
+
+Notify("Invis UI Loaded", "Fast unload, safe handlers, settings tab added. Method 1 preserved.", 1.5)
+if DEBUG_MODE then print("LoadInvisUI: UI Loaded Successfully with FAST unload implemented") end
+
+_G.__FE_Invis_Unload = fastUnload
